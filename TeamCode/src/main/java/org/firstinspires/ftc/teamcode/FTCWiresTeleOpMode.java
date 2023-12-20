@@ -41,8 +41,8 @@ public class FTCWiresTeleOpMode extends LinearOpMode {
                 drive.setDrivePowers(new PoseVelocity2d(
                         new Vector2d(
                                 //x & y flipped weirdly for some reason in this code - x is from outtake to intake and y from side to side
-                                -gamepad1.left_stick_y * SLOW_DOWN_FACTOR,
-                                gamepad1.left_trigger * SLOW_DOWN_FACTOR -gamepad1.right_trigger * SLOW_DOWN_FACTOR
+                                gamepad1.left_stick_y * SLOW_DOWN_FACTOR,
+                                -gamepad1.left_trigger * SLOW_DOWN_FACTOR -gamepad1.right_trigger * SLOW_DOWN_FACTOR
 
                         ),
                         //Can change the below code to be "gamepad1.right_stick_x" for separate turning and driving
@@ -63,12 +63,12 @@ public class FTCWiresTeleOpMode extends LinearOpMode {
                 telemetry.update();
                 //Intake function
                 if (gamepad1.a) {
-                    counterRoller.setPower(0.75);
-                    intakeMotor.setPower(0.7);
+                    counterRoller.setPower(0.85);
+                    intakeMotor.setPower(0.75);
                 }
                 else if(gamepad1.b){
-                    counterRoller.setPower(-0.75);
-                    intakeMotor.setPower(-0.7);
+                    counterRoller.setPower(-0.85);
+                    intakeMotor.setPower(-0.75);
                 }
                 else{
                     counterRoller.setPower(0);
@@ -90,8 +90,8 @@ public class FTCWiresTeleOpMode extends LinearOpMode {
             while (opModeIsActive()) {
                 drive.setDrivePowers(new PoseVelocity2d(
                         new Vector2d(
-                                -gamepad1.left_stick_y * SLOW_DOWN_FACTOR,
-                                gamepad1.left_trigger * SLOW_DOWN_FACTOR
+                                gamepad1.left_stick_y * SLOW_DOWN_FACTOR,
+                                -gamepad1.left_trigger * SLOW_DOWN_FACTOR
                                         -gamepad1.left_stick_x * SLOW_DOWN_FACTOR
 
                         ),
