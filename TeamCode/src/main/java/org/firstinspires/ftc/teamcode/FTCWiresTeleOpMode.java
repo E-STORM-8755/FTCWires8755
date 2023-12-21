@@ -27,7 +27,7 @@ public class FTCWiresTeleOpMode extends LinearOpMode {
         liftArm = hardwareMap.get(DcMotor.class, "liftArm");
         counterRoller = hardwareMap.get(CRServo.class, "roller");
         double SLOW_DOWN_FACTOR = 0.5; //TODO Adjust to driver comfort
-        telemetry.addData("Initializing FTC Wires (ftcwires.org) TeleOp adopted for Team:","8755 E-STORM");
+        telemetry.addData("Initializing FTC Wires (ftcwires.org) TeleOp adopted for Team:","8755");
         telemetry.update();
 
 
@@ -76,9 +76,10 @@ public class FTCWiresTeleOpMode extends LinearOpMode {
                 }
                 //Boost function
                 if (gamepad1.y && SLOW_DOWN_FACTOR <= 0.7){
-                    SLOW_DOWN_FACTOR = SLOW_DOWN_FACTOR + 0.2;
+                    SLOW_DOWN_FACTOR = 0.7;
                 }
-                else{
+
+                else  {
                     SLOW_DOWN_FACTOR = 0.5;
                 }
             }
