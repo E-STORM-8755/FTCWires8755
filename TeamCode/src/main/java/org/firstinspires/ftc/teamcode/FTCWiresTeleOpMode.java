@@ -18,14 +18,9 @@ import org.firstinspires.ftc.teamcode.tuning.TuningOpModes;
 
 @TeleOp(name = "FTC Wires TeleOp", group = "00-Teleop")
 public class FTCWiresTeleOpMode extends LinearOpMode {
-    public DcMotor intakeMotor;
-    public DcMotor liftArm;
-    public CRServo counterRoller;
+
     @Override
     public void runOpMode() throws InterruptedException {
-        intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
-        liftArm = hardwareMap.get(DcMotor.class, "liftArm");
-        counterRoller = hardwareMap.get(CRServo.class, "roller");
         double SLOW_DOWN_FACTOR = 0.5; //TODO Adjust to driver comfort
         telemetry.addData("Initializing FTC Wires (ftcwires.org) TeleOp adopted for Team:","8755");
         telemetry.update();
@@ -33,6 +28,9 @@ public class FTCWiresTeleOpMode extends LinearOpMode {
 
         if (TuningOpModes.DRIVE_CLASS.equals(MecanumDrive.class)) {
             MecanumDrive drive = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
+
+            drive.setGamePad1(gamepad1);
+            drive.setGamePad2(gamepad2);
 
             waitForStart();
 
@@ -60,28 +58,50 @@ public class FTCWiresTeleOpMode extends LinearOpMode {
                 telemetry.addData("x", drive.pose.position.x);
                 telemetry.addData("y", drive.pose.position.y);
                 telemetry.addData("heading", Math.toDegrees(drive.pose.heading.log()));
-                telemetry.update();
-                //Intake function
+                telemetry.addLine("Arm Location:");
+                telemetry.addData("", drive.liftArm.getCurrentPosition());
+                telemetry.addLine("Outtake Rotate Servo Position");
+                telemetry.addData("Position:", drive.outtakeRotate.getPosition());
+;               telemetry.update();
+
+                drive.liftArmAdjust();
+
                 if (gamepad1.a) {
-                    counterRoller.setPower(1);
-                    intakeMotor.setPower(1);
-                }
-                else if(gamepad1.b){
-                    counterRoller.setPower(-0.85);
-                    intakeMotor.setPower(-0.75);
-                }
-                else{
-                    counterRoller.setPower(0);
-                    intakeMotor.setPower(0);
-                }
-                //Boost function
-                if (gamepad1.y && SLOW_DOWN_FACTOR <= 0.7){
-                    SLOW_DOWN_FACTOR = 0.7;
+                    drive.intake();
                 }
 
-                else  {
-                    SLOW_DOWN_FACTOR = 0.5;
+                else if (gamepad1.b){
+                    drive.reverseIntake();
                 }
+
+                else {
+                    drive.idleIntake();
+                }
+                //Boost function
+                if (gamepad1.right_bumper && SLOW_DOWN_FACTOR <= 0.7){
+                    SLOW_DOWN_FACTOR = 1;
+                }
+                //Return to normal speed
+                else  {
+                    SLOW_DOWN_FACTOR = 0.6;
+                }
+
+                if (gamepad1.dpad_down){
+                    drive.releasePixels();
+                }
+
+                if (gamepad1.y){
+                    drive.rotateOuttakeToOuttakePos();
+                }
+
+                if (gamepad1.x){
+                    drive.moveToIntakePos = true;
+                }
+
+                if (gamepad1.left_bumper){
+                    drive.rotateOuttakeToIntakePos();
+                }
+
             }
         } else if (TuningOpModes.DRIVE_CLASS.equals(TankDrive.class)) {
             TankDrive drive = new TankDrive(hardwareMap, new Pose2d(0, 0, 0));

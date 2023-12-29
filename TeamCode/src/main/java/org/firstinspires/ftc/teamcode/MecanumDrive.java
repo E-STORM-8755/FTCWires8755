@@ -31,12 +31,15 @@ import com.acmerobotics.roadrunner.ftc.PositionVelocityPair;
 import com.acmerobotics.roadrunner.ftc.RawEncoder;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
+
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
@@ -91,7 +94,17 @@ public final class MecanumDrive {
         public double lateralVelGain = 0.0;
         public double headingVelGain = 0.0; // shared with turn
         //TODO End Step 12
+
+
     }
+    //Parameters for saveLiftArmPos & other methods
+    private Gamepad gamepad1 = null;
+    private Gamepad gamepad2 = null;
+    private int currentArmPosition = 0;
+    private boolean canMoveLiftArm = true;
+    public boolean inIntakePos;
+    public boolean moveToIntakePos;
+
 
     public static Params PARAMS = new Params();
 
@@ -108,7 +121,11 @@ public final class MecanumDrive {
     public final AccelConstraint defaultAccelConstraint =
             new ProfileAccelConstraint(PARAMS.minProfileAccel, PARAMS.maxProfileAccel);
 
-    public final DcMotorEx leftFront, leftBack, rightBack, rightFront;
+    public final DcMotorEx leftFront, leftBack, rightBack, rightFront, liftArm, intakeMotor;
+
+    public final CRServo outtakeWheel, counterRoller;
+
+    public final Servo outtakeRotate;
 
     public final VoltageSensor voltageSensor;
 
@@ -199,11 +216,17 @@ public final class MecanumDrive {
             module.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
         }
 
+
         //Step 1 Drive Classes : get basic hardware configured. Update motor names to what is used in robot configuration
         leftFront = hardwareMap.get(DcMotorEx.class, "leftFront");
         leftBack = hardwareMap.get(DcMotorEx.class, "leftBack");
         rightBack = hardwareMap.get(DcMotorEx.class, "rightBack");
         rightFront = hardwareMap.get(DcMotorEx.class, "rightFront");
+        liftArm = hardwareMap.get(DcMotorEx.class, "liftArm");
+        intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
+        counterRoller = hardwareMap.get(CRServo.class, "counterRoller");
+        outtakeWheel = hardwareMap.get(CRServo.class, "outtakeWheel");
+        outtakeRotate = hardwareMap.get(Servo.class, "outtakeRotate");
         //TODO End Step 1
 
         //Step 4.1 Run MecanumDirectionDebugger Tuning OpMode to set motor direction correctly
@@ -237,11 +260,14 @@ public final class MecanumDrive {
         //Uncomment next line if using Two Dead Wheel Localizer and also check TwoDeadWheelLocalizer.java for Step 3.1
         //localizer = new TwoDeadWheelLocalizer(hardwareMap, imu, PARAMS.inPerTick)
 
+
+
         //Uncomment next line if using Three Dead Wheel Localizer and also check ThreeDeadWheelLocalizer.java for Step 3.1
         //localizer = new ThreeDeadWheelLocalizer(hardwareMap, PARAMS.inPerTick)
         //TODO End Step 3
 
         FlightRecorder.write("MECANUM_PARAMS", PARAMS);
+        liftArm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
     }
 
     public void setDrivePowers(PoseVelocity2d powers) {
@@ -477,4 +503,94 @@ public final class MecanumDrive {
                 0.25, 0.1
         );
     }
-}
+
+    //Arm function - limits and moving
+
+    public void setGamePad1(Gamepad g1) {gamepad1 = g1;}
+    public void setGamePad2(Gamepad g2) {gamepad2 = g2;}
+    //Save the current lift arm position if no power is being added
+    public void liftArmAdjust(){
+        float rightStickPos = gamepad1.right_stick_y; //find right stick position value
+        currentArmPosition = liftArm.getCurrentPosition();
+        if (rightStickPos != 0){
+           if (liftArm.getCurrentPosition() > -300){
+               outtakeRotate.setPosition(0.375);
+           }
+            if (((liftArm.getCurrentPosition()) <= -1800 || (liftArm.getCurrentPosition() > 5)) && !moveToIntakePos){
+               liftArm.setPower(0);
+           }
+
+           else {
+               if ((rightStickPos > 0)){
+                   liftArm.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                   liftArm.setPower(rightStickPos * 0.5);
+               }
+
+               if ((rightStickPos < 0)){
+                   liftArm.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                   liftArm.setPower(rightStickPos * 0.6);
+               }
+           }
+
+        }
+        else {
+            if (canMoveLiftArm  && !moveToIntakePos  && !inIntakePos){
+                liftArm.setTargetPosition(currentArmPosition);
+                liftArm.setPower(0.5);
+                liftArm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            }
+            if (liftArm.getCurrentPosition() < 0 && liftArm.getCurrentPosition() > -15){
+                inIntakePos = true;
+            }
+
+            if (liftArm.getCurrentPosition() < -15){
+                inIntakePos = false;
+            }
+            //If the arm can move is not in the intake position and dpad left is pressed, move to intake position.
+            if (moveToIntakePos && !inIntakePos) {
+                liftArm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                outtakeRotate.setPosition(0.375);
+                liftArm.setTargetPosition(0);
+                liftArm.setPower(0.4);
+            }
+            //If in target position, stop movement of lift arm, turn inIntakePos to true, and set liftArm mode to normal mode for other movements
+            else if (inIntakePos){
+                liftArm.setPower(0);
+                inIntakePos = true;
+                liftArm.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                moveToIntakePos = false;
+            }
+        }
+        }
+
+    //Intake pixels - full power to counter roller, intake motor, and outtake wheel
+    public void intake(){
+        counterRoller.setPower(1);
+        intakeMotor.setPower(1);
+        outtakeWheel.setPower(1);
+    }
+    //Reverse intake - reverse counter roller and intake motor
+    public void reverseIntake(){
+        counterRoller.setPower(-0.6);
+        intakeMotor.setPower(-0.75);
+    }
+    //Idle intake - no power to counter roller, intake motor, or outtake wheel
+    public void idleIntake(){
+        counterRoller.setPower(0);
+        intakeMotor.setPower(0);
+        outtakeWheel.setPower(0);
+    }
+    //Release pixels from outtake
+    public void releasePixels(){
+        outtakeWheel.setPower(-1);
+    }
+    //Move outtake to outtake position and prepare to drop pixels onto backdrop
+    public void rotateOuttakeToOuttakePos(){
+        outtakeRotate.setPosition(0.7);
+    }
+    //Move outtake to intake position. Should be less used than usual.
+    public void rotateOuttakeToIntakePos(){
+        outtakeRotate.setPosition(0.375);
+    }
+
+    }
